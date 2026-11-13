@@ -205,4 +205,175 @@ footer {
 
 </body>
 </html>
+<section id="real-football">
+  <h2>⚽ مرکز مسابقات رئال مادرید</h2>
 
+  <p id="last-update">در انتظار دریافت اطلاعات...</p>
+
+  <h3>🏆 جدول لالیگا</h3>
+  <a href="https://www.laliga.com/laliga-easports/clasificacion"
+     target="_blank">مشاهده جدول رسمی لالیگا</a>
+
+  <iframe id="laliga-table"
+    src="https://www.laliga.com/laliga-easports/clasificacion"
+    title="جدول لالیگا"></iframe>
+
+  <h3>⭐ جدول لیگ قهرمانان اروپا</h3>
+  <a href="https://www.uefa.com/uefachampionsleague/standings/"
+     target="_blank">مشاهده جدول رسمی چمپیونزلیگ</a>
+
+  <iframe id="ucl-table"
+    src="https://www.uefa.com/uefachampionsleague/standings/"
+    title="جدول لیگ قهرمانان"></iframe>
+
+  <h3>📋 بازی‌های قبلی رئال</h3>
+  <div id="previous-games">در حال دریافت...</div>
+
+  <h3>📅 بازی‌های آینده رئال</h3>
+  <div id="next-games">در حال دریافت...</div>
+
+  <button id="refresh-games" type="button">
+    🔄 به‌روزرسانی مسابقات
+  </button>
+</section>
+
+<style>
+#real-football {
+  direction: rtl;
+  text-align: center;
+  background: #101b35;
+  color: white;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+#real-football h2,
+#real-football h3 {
+  color: #e8c76a;
+  margin-top: 28px;
+}
+
+#real-football iframe {
+  display: block;
+  width: 100%;
+  height: 550px;
+  border: 0;
+  border-radius: 12px;
+  background: white;
+  margin: 15px 0;
+}
+
+#real-football a {
+  color: #e8c76a;
+}
+
+#real-football .match {
+  background: #1b2b4b;
+  border: 1px solid #d8b75b;
+  border-radius: 13px;
+  padding: 15px;
+  margin: 12px auto;
+  max-width: 650px;
+}
+
+#real-football .match p {
+  color: #ddd;
+}
+
+#real-football button {
+  background: #d8b75b;
+  color: #101b35;
+  border: 0;
+  padding: 12px 22px;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+}
+</style>
+
+<script>
+async function updateRealMatches() {
+  const previous = document.getElementById("previous-games");
+  const upcoming = document.getElementById("next-games");
+  const updateText = document.getElementById("last-update");
+
+  previous.innerHTML = "در حال دریافت...";
+  upcoming.innerHTML = "در حال دریافت...";
+
+  try {
+    const response = await fetch(
+      "https://site.api.espn.com/apis/site/v2/sports/soccer/esp.1/teams/86/schedule?season=2026"
+    );
+
+    if (!response.ok) {
+      throw new Error("دریافت اطلاعات ناموفق بود");
+    }
+
+    const data = await response.json();
+    const events = data.events || [];
+    const now = Date.now();
+
+    const past = events
+      .filter(e => new Date(e.date).getTime() < now)
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 8);
+
+    const future = events
+      .filter(e => new Date(e.date).getTime() >= now)
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .slice(0, 8);
+
+    function renderMatches(matches, isPast) {
+      if (!matches.length) {
+        return "<p>مسابقه‌ای پیدا نشد.</p>";
+      }
+
+      return matches.map(event => {
+        const competition = event.competitions?.[0];
+        const teams = competition?.competitors || [];
+
+        const home = teams.find(t => t.homeAway === "home");
+        const away = teams.find(t => t.homeAway === "away");
+
+        const homeName = home?.team?.displayName || "میزبان";
+        const awayName = away?.team?.displayName || "میهمان";
+
+        const score = isPast
+          ? `<p>${home?.score ?? "-"} - ${away?.score ?? "-"}</p>`
+          : "";
+
+        const date = new Date(event.date).toLocaleString("fa-IR");
+
+        return `
+          <div class="match">
+            <strong>${homeName} 🆚 ${awayName}</strong>
+            ${score}
+            <p>${date}</p>
+            <a href="https://www.espn.com/soccer/match?gameId=${event.id}"
+               target="_blank">جزئیات مسابقه</a>
+          </div>
+        `;
+      }).join("");
+    }
+
+    previous.innerHTML = renderMatches(past, true);
+    upcoming.innerHTML = renderMatches(future, false);
+
+    updateText.textContent =
+      "آخرین به‌روزرسانی: " +
+      new Date().toLocaleTimeString("fa-IR");
+
+  } catch (error) {
+    previous.innerHTML = "دریافت نتایج ممکن نشد.";
+    upcoming.innerHTML = "لطفاً اتصال اینترنت را بررسی کن.";
+    updateText.textContent = "به‌روزرسانی ناموفق بود.";
+  }
+}
+
+updateRealMatches();
+
+setInterval(updateRealMatches, 5 * 60 * 1000);
+
+document.getElementById("refresh-games")
+  .addEventListener("click", updateRealMatches);
+</script>
